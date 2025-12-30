@@ -1,18 +1,16 @@
-// Robust API URL configuration for different deployment scenarios
+// Simple and clean API service for product management
 const getApiBaseUrl = () => {
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
-    const port = window.location.port;
 
-    console.log('Detecting API URL for:', { hostname, protocol, port, href: window.location.href });
+    console.log('Detecting API URL for:', { hostname, protocol, href: window.location.href });
 
     // Development
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
         return 'http://localhost:3000';
     }
 
-    // Production deployment - prefer nginx proxy setup
-    // Since we configured nginx to proxy /api to backend service
+    // Production - use nginx proxy setup
     const apiUrl = `${protocol}//${hostname}/api`;
     console.log('Using nginx proxy API URL:', apiUrl);
     return apiUrl;
@@ -23,113 +21,66 @@ const API_BASE_URL = getApiBaseUrl();
 class ProductService {
     constructor() {
         this.API_BASE_URL = API_BASE_URL;
-        this.fallbackUrls = this.getFallbackUrls();
         console.log('ProductService initialized with API_BASE_URL:', this.API_BASE_URL);
-        console.log('Fallback URLs:', this.fallbackUrls);
-        // Test the API endpoint on initialization
-        this.testConnection();
     }
-
-    getFallbackUrls() {
-        const hostname = window.location.hostname;
-        const protocol = window.location.protocol;
-
-        if (hostname === 'localhost' || hostname === '127.0.0.1') {
-            return ['http://localhost:3000'];
-        }
-
-        // Priority order for production:
-        // 1. Nginx proxy (same domain /api) - now configured
-        // 2. API subdomain (if exists)
-        // 3. Backend subdomain (if exists)  
-        // 4. Direct port access (usually blocked)
-        return [
-            `${protocol}//${hostname}/api`, // Nginx proxy (highest priority)
-            `${protocol}//api.${hostname.replace(/^[^.]+\./, '')}`, // API subdomain
-            `${protocol}//backend.${hostname.replace(/^[^.]+\./, '')}`, // Backend subdomain
-            `${protocol}//${hostname}:3000`, // Direct port (last resort)
-            method: 'GET',
-            signal: AbortSignal.timeout(5000) // 5 second timeout
-                });
-    if(response.ok) {
-        console.log('✅ API connection successful with:', url);
-        this.API_BASE_URL = url; // Update to working URL
-        return;
-    }
-} catch (error) {
-    console.warn('❌ API connection failed for:', url, error.message);
-}
-        }
-console.error('❌ All API URLs failed. Using original URL:', this.API_BASE_URL);
-    }
-
-    async makeRequest(endpoint, options = {}) {
-    const urls = [this.API_BASE_URL, ...this.fallbackUrls];
-
-    for (const baseUrl of urls) {
-        try {
-            console.log(`Trying ${endpoint} with base URL:`, baseUrl);
-            const response = await fetch(`${baseUrl}${endpoint}`, options);
-
-            if (response.ok) {
-                // Update working URL for future requests
-                if (baseUrl !== this.API_BASE_URL) {
-                    console.log('Switching to working API URL:', baseUrl);
-                    this.API_BASE_URL = baseUrl;
-                }
-                return response;
-            }
-        } catch (error) {
-            console.warn(`Request failed for ${baseUrl}${endpoint}:`, error.message);
-            continue;
-        }
-    }
-
-    throw new Error(`All API URLs failed for ${endpoint}`);
-}
 
     async getAllProducts() {
-    try {
-        console.log('Fetching all products...');
-        const response = await this.makeRequest('/products');
-        const data = await response.json();
-        console.log('Products fetched:', data);
-        return data;
-    } catch (error) {
-        console.error('Error fetching products:', error);
-        throw error;
+        try {
+            console.log('Fetching all products...');
+            const response = await fetch(`${this.API_BASE_URL}/products`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            console.log('Products fetched:', data);
+            return data;
+        } catch (error) {
+            console.error('Error fetching products:', error);
+            throw error;
+        }
     }
-}
 
     async getProductById(id) {
-    try {
-        console.log('Fetching product by ID:', id);
-        const response = await this.makeRequest(`/products/${id}`);
-        return await response.json();
-    } catch (error) {
-        console.error('Error fetching product:', error);
-        throw error;
+        try {
+            console.log('Fetching product by ID:', id);
+            const response = await fetch(`${this.API_BASE_URL}/products/${id}`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching product:', error);
+            throw error;
+        }
     }
-}
 
     async createProduct(productData) {
-    try {
-        console.log('Creating product:', productData);
-        const response = await this.makeRequest('/products', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(productData)
-        });
-        const result = await response.json();
-        console.log('Product created:', result);
-        return result;
-    } catch (error) {
-        console.error('Error creating product:', error);
-        throw error;
+        try {
+            console.log('Creating product:', productData);
+            const response = await fetch(`${this.API_BASE_URL}/products`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(productData)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const result = await response.json();
+            console.log('Product created:', result);
+            return result;
+        } catch (error) {
+            console.error('Error creating product:', error);
+            throw error;
+        }
     }
-}
 }
 
 export default new ProductService();
