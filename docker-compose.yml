@@ -45,23 +45,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
-      DB_USERNAME: ${POSTGRES_USER:-postgres}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      DB_DATABASE: ${POSTGRES_DB:-semester_project}
-      PORT: 3000
-    expose:
-      - "3000"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - quiz-network
-    healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:3000/health || exit 1" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
 
   frontend:
     build:
@@ -77,7 +60,18 @@ services:
     networks:
       - quiz-network
     healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost/ || exit 1" ]
+      test: ["CMD-SHELL", "curl -f http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  postgres_data:
+
+networks:
+  quiz-network:
+    driver: bridge
       interval: 30s
       timeout: 10s
       retries: 3
