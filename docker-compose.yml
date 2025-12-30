@@ -8,8 +8,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-semester_project}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -28,14 +26,14 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       DB_DATABASE: ${POSTGRES_DB:-semester_project}
       PORT: 3000
-    ports:
-      - "${BACKEND_PORT:-3000}:3000"
+    expose:
+      - "3000"
     depends_on:
       - postgres
     networks:
       - quiz-network
     healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:3000 || exit 1" ]
+      test: ["CMD-SHELL", "curl -f http://localhost:3000 || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -47,8 +45,8 @@ services:
       dockerfile: Dockerfile
       target: production
     restart: unless-stopped
-    ports:
-      - "${FRONTEND_PORT:-8080}:80"
+    expose:
+      - "80"
     depends_on:
       - backend
     networks:
