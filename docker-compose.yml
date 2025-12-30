@@ -3,17 +3,15 @@ version: '3.8'
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: quiz-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: semester_project
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-semester_project}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-db:/docker-entrypoint-initdb.d
     networks:
       - quiz-network
 
@@ -22,23 +20,22 @@ services:
       context: ./Back
       dockerfile: Dockerfile
       target: production
-    container_name: quiz-backend
     restart: unless-stopped
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_USERNAME: postgres
-      DB_PASSWORD: postgres
-      DB_DATABASE: semester_project
+      DB_USERNAME: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DB_DATABASE: ${POSTGRES_DB:-semester_project}
       PORT: 3000
     ports:
-      - "3000:3000"
+      - "${BACKEND_PORT:-3000}:3000"
     depends_on:
       - postgres
     networks:
       - quiz-network
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:3000/health" ]
+      test: [ "CMD-SHELL", "curl -f http://localhost:3000 || exit 1" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -49,10 +46,9 @@ services:
       context: ./Front
       dockerfile: Dockerfile
       target: production
-    container_name: quiz-frontend
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "${FRONTEND_PORT:-8080}:80"
     depends_on:
       - backend
     networks:
