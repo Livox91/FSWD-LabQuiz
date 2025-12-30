@@ -13,7 +13,7 @@ const getApiBaseUrl = () => {
 
     // Production deployment patterns
     // For Coolify and similar platforms, try multiple common patterns
-    
+
     // Most common: Backend is on a subdomain
     if (hostname.includes('.')) {
         const domain = hostname.replace(/^[^.]+\./, ''); // Remove subdomain
@@ -21,7 +21,7 @@ const getApiBaseUrl = () => {
         console.log('Trying API subdomain:', backendUrl);
         return backendUrl;
     }
-    
+
     // Fallback: Same domain with /api path (reverse proxy setup)
     const fallbackUrl = `${protocol}//${hostname}/api`;
     console.log('Using fallback API URL:', fallbackUrl);
@@ -39,15 +39,15 @@ class ProductService {
         // Test the API endpoint on initialization
         this.testConnection();
     }
-    
+
     getFallbackUrls() {
         const hostname = window.location.hostname;
         const protocol = window.location.protocol;
-        
+
         if (hostname === 'localhost' || hostname === '127.0.0.1') {
             return ['http://localhost:3000'];
         }
-        
+
         return [
             `${protocol}//api.${hostname.replace(/^[^.]+\./, '')}`, // API subdomain
             `${protocol}//${hostname}/api`, // Same domain with /api path
@@ -60,7 +60,7 @@ class ProductService {
         for (const url of [this.API_BASE_URL, ...this.fallbackUrls]) {
             try {
                 console.log('Testing API connection to:', `${url}/health`);
-                const response = await fetch(`${url}/health`, { 
+                const response = await fetch(`${url}/health`, {
                     method: 'GET',
                     signal: AbortSignal.timeout(5000) // 5 second timeout
                 });
@@ -78,12 +78,12 @@ class ProductService {
 
     async makeRequest(endpoint, options = {}) {
         const urls = [this.API_BASE_URL, ...this.fallbackUrls];
-        
+
         for (const baseUrl of urls) {
             try {
                 console.log(`Trying ${endpoint} with base URL:`, baseUrl);
                 const response = await fetch(`${baseUrl}${endpoint}`, options);
-                
+
                 if (response.ok) {
                     // Update working URL for future requests
                     if (baseUrl !== this.API_BASE_URL) {
@@ -97,7 +97,7 @@ class ProductService {
                 continue;
             }
         }
-        
+
         throw new Error(`All API URLs failed for ${endpoint}`);
     }
 
