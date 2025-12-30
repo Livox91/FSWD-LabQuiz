@@ -13,7 +13,7 @@ services:
     networks:
       - quiz-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-semester_project}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-semester_project}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -40,7 +40,7 @@ services:
     networks:
       - quiz-network
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
+      test: [ "CMD-SHELL", "curl -f http://localhost:3000/health || exit 1" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -60,7 +60,7 @@ services:
     networks:
       - quiz-network
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost/ || exit 1"]
+      test: [ "CMD-SHELL", "curl -f http://localhost/ || exit 1" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -68,6 +68,7 @@ services:
 
 volumes:
   postgres_data:
+
 
 networks:
   quiz-network:

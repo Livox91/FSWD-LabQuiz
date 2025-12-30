@@ -1,58 +1,110 @@
-// Simple and robust API URL configuration
+// Robust API URL configuration for different deployment scenarios
 const getApiBaseUrl = () => {
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
-    
-    console.log('Detecting API URL for:', { hostname, protocol, href: window.location.href });
-    
+    const port = window.location.port;
+
+    console.log('Detecting API URL for:', { hostname, protocol, port, href: window.location.href });
+
     // Development
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
         return 'http://localhost:3000';
     }
+
+    // Production deployment patterns
+    // For Coolify and similar platforms, try multiple common patterns
     
-    // Production - try the most common Coolify pattern first
-    // Most Coolify deployments use the same hostname with different ports
-    // or subdomains
-    const apiUrl = `${protocol}//${hostname}:3000`;
-    console.log('Using production API URL:', apiUrl);
+    // Most common: Backend is on a subdomain
+    if (hostname.includes('.')) {
+        const domain = hostname.replace(/^[^.]+\./, ''); // Remove subdomain
+        const backendUrl = `${protocol}//api.${domain}`;
+        console.log('Trying API subdomain:', backendUrl);
+        return backendUrl;
+    }
     
-    return apiUrl;
+    // Fallback: Same domain with /api path (reverse proxy setup)
+    const fallbackUrl = `${protocol}//${hostname}/api`;
+    console.log('Using fallback API URL:', fallbackUrl);
+    return fallbackUrl;
 };
 
 const API_BASE_URL = getApiBaseUrl();
 
 class ProductService {
     constructor() {
-        console.log('ProductService initialized with API_BASE_URL:', API_BASE_URL);
+        this.API_BASE_URL = API_BASE_URL;
+        this.fallbackUrls = this.getFallbackUrls();
+        console.log('ProductService initialized with API_BASE_URL:', this.API_BASE_URL);
+        console.log('Fallback URLs:', this.fallbackUrls);
         // Test the API endpoint on initialization
         this.testConnection();
     }
     
-    async testConnection() {
-        try {
-            console.log('Testing API connection to:', `${API_BASE_URL}/health`);
-            const response = await fetch(`${API_BASE_URL}/health`, { method: 'GET' });
-            if (response.ok) {
-                console.log('✅ API connection successful');
-            } else {
-                console.warn('⚠️ API responded with status:', response.status);
-            }
-        } catch (error) {
-            console.error('❌ API connection failed:', error.message);
-            console.log('Will try alternative URL patterns...');
+    getFallbackUrls() {
+        const hostname = window.location.hostname;
+        const protocol = window.location.protocol;
+        
+        if (hostname === 'localhost' || hostname === '127.0.0.1') {
+            return ['http://localhost:3000'];
         }
+        
+        return [
+            `${protocol}//api.${hostname.replace(/^[^.]+\./, '')}`, // API subdomain
+            `${protocol}//${hostname}/api`, // Same domain with /api path
+            `${protocol}//backend.${hostname.replace(/^[^.]+\./, '')}`, // Backend subdomain
+            `${protocol}//${hostname}:3000`, // Same domain with port (last resort)
+        ];
+    }
+
+    async testConnection() {
+        for (const url of [this.API_BASE_URL, ...this.fallbackUrls]) {
+            try {
+                console.log('Testing API connection to:', `${url}/health`);
+                const response = await fetch(`${url}/health`, { 
+                    method: 'GET',
+                    signal: AbortSignal.timeout(5000) // 5 second timeout
+                });
+                if (response.ok) {
+                    console.log('✅ API connection successful with:', url);
+                    this.API_BASE_URL = url; // Update to working URL
+                    return;
+                }
+            } catch (error) {
+                console.warn('❌ API connection failed for:', url, error.message);
+            }
+        }
+        console.error('❌ All API URLs failed. Using original URL:', this.API_BASE_URL);
+    }
+
+    async makeRequest(endpoint, options = {}) {
+        const urls = [this.API_BASE_URL, ...this.fallbackUrls];
+        
+        for (const baseUrl of urls) {
+            try {
+                console.log(`Trying ${endpoint} with base URL:`, baseUrl);
+                const response = await fetch(`${baseUrl}${endpoint}`, options);
+                
+                if (response.ok) {
+                    // Update working URL for future requests
+                    if (baseUrl !== this.API_BASE_URL) {
+                        console.log('Switching to working API URL:', baseUrl);
+                        this.API_BASE_URL = baseUrl;
+                    }
+                    return response;
+                }
+            } catch (error) {
+                console.warn(`Request failed for ${baseUrl}${endpoint}:`, error.message);
+                continue;
+            }
+        }
+        
+        throw new Error(`All API URLs failed for ${endpoint}`);
     }
 
     async getAllProducts() {
         try {
-            console.log('Fetching products from:', `${API_BASE_URL}/products`);
-            const response = await fetch(`${API_BASE_URL}/products`);
-            console.log('Response status:', response.status);
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Error response:', errorText);
-                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-            }
+            console.log('Fetching all products...');
+            const response = await this.makeRequest('/products');
             const data = await response.json();
             console.log('Products fetched:', data);
             return data;
@@ -64,12 +116,8 @@ class ProductService {
 
     async getProductById(id) {
         try {
-            console.log('Fetching product by ID from:', `${API_BASE_URL}/products/${id}`);
-            const response = await fetch(`${API_BASE_URL}/products/${id}`);
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-            }
+            console.log('Fetching product by ID:', id);
+            const response = await this.makeRequest(`/products/${id}`);
             return await response.json();
         } catch (error) {
             console.error('Error fetching product:', error);
@@ -80,20 +128,13 @@ class ProductService {
     async createProduct(productData) {
         try {
             console.log('Creating product:', productData);
-            console.log('POST to:', `${API_BASE_URL}/products`);
-            const response = await fetch(`${API_BASE_URL}/products`, {
+            const response = await this.makeRequest('/products', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(productData)
             });
-            console.log('Create response status:', response.status);
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Create error response:', errorText);
-                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-            }
             const result = await response.json();
             console.log('Product created:', result);
             return result;
