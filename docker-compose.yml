@@ -31,16 +31,16 @@ services:
       DB_USERNAME: ${POSTGRES_USER:-postgres}
       DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       DB_DATABASE: ${POSTGRES_DB:-semester_project}
-      PORT: 3000
+      PORT: 8000
     expose:
-      - "3000"
+      - "8000"
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - quiz-network
     healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:3000/health || exit 1" ]
+      test: [ "CMD-SHELL", "curl -f http://localhost:8000/health || exit 1" ]
       interval: 30s
       timeout: 10s
       retries: 3
