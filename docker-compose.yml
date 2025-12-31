@@ -52,8 +52,8 @@ services:
       dockerfile: Dockerfile
       target: production
     restart: unless-stopped
-    expose:
-      - "80"
+    ports:
+      - "5137:80"
     depends_on:
       backend:
         condition: service_healthy
